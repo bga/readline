@@ -23,6 +23,8 @@
 #include <readline/readline.h>
 #include <readline/history.h>
 
+#define outputStream stderr
+
 bool CString_isEmpty(const char* str) {
 	if(str == NULL) return true;
 	
@@ -48,8 +50,8 @@ int main(int argc, char* argv[]) {
 		str = readline(promtp);
 		if(!CString_isEmpty(str)) {
 			add_history(str);
-			fprintf(stderr, "%s\n", str);
-			fflush(stderr);
+			fprintf(outputStream, "%s\n", str);
+			fflush(outputStream);
 		};
 	}
 	
