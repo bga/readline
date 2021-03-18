@@ -1,0 +1,99 @@
+# Copyright 2020 Bga <bga.email@gmail.com>
+
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation; either version 2, or (at your option)
+# any later version.
+
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+
+# You should have received a copy of the GNU General Public License
+# along with this program; see the file COPYING.  If not, write to
+# the Free Software Foundation, Inc., 59 Temple Place - Suite 330,
+# Boston, MA 02111-1307, USA.
+
+
+space :=
+space +=
+pathToName = $(subst /,_,$(subst $(space),-,$1))
+
+SELF_PATH := $(abspath $(lastword $(MAKEFILE_LIST)))
+PROJECT = $(call pathToName,$(dir $(SELF_PATH)))
+
+TARGET_EXEC ?= $(PROJECT).exe
+
+ARCH ?= i386
+PLATFORM ?= windows
+
+
+BUILD_DIR ?= $(TEMP)/$(PROJECT)
+SRC_DIRS ?= ./src
+
+SRCS := $(shell find $(SRC_DIRS) -name *.cpp -or -name *.c -or -name *.s)
+OBJS := $(subst \,/,$(SRCS:%=$(BUILD_DIR)/%.o))
+DEPS := $(OBJS:.o=.d)
+
+INC_DIRS := $(shell find $(SRC_DIRS) -type d)
+INC_FLAGS := $(addprefix -I,$(INC_DIRS))
+
+#CPPFLAGS ?= $(INC_FLAGS) -MMD -MP
+CPPFLAGS += -Wall -Wextra -pedantic
+CPPFLAGS += -Wno-unused-variable -Wno-unused-parameter
+CPPFLAGS += -D_WIN32 
+CPPFLAGS += -I$(PLATFORM)/include -Iinclude -I../../$(PLATFORM)/include -I../../include -I../../../../!cpp/include
+CPPFLAGS += -fPIC
+# CPPFLAGS += -o .obj/$(@F)
+CPPFLAGS += -fdollars-in-identifiers
+
+ifdef DEBUG
+	CPPFLAGS += -ggdb -DDEBUG -Og
+else
+	CPPFLAGS += -DNDEBUG -O2
+endif
+
+#CPPFLAGS += -MMD -MP -MF $(BUILD_DIR)/$(@F).d
+CPPFLAGS += -MMD -MP
+-include $(DEPS)
+
+
+
+# LDFLAGS += -L../../lib/$(PLATFORM)/$(ARCH) -L../../../../!cpp/lib/$(PLATFORM)/$(ARCH) 
+
+# all: app
+
+$(TARGET_EXEC): $(OBJS)
+	$(CC) $(OBJS) -o "$@" $(LDFLAGS)
+
+# assembly
+$(BUILD_DIR)/%.s.o: %.s
+	$(MKDIR_P) $(dir $@)
+	$(AS) $(ASFLAGS) -c $< -o $@
+
+# c source
+$(BUILD_DIR)/%.c.o: %.c
+	$(MKDIR_P) $(dir $@)
+	$(CC) $(CPPFLAGS) $(CFLAGS) -c $< -o $@
+
+# c++ source
+$(BUILD_DIR)/%.cpp.o: %.cpp
+	$(MKDIR_P) $(dir $@)
+	$(CXX) $(CXXFLAGS) $(CPPFLAGS) -c $< -o $@
+
+
+.PHONY: clean list
+
+clean:
+	$(RM) -r $(BUILD_DIR)
+
+MKDIR_P ?= mkdir -p
+
+# [https://stackoverflow.com/a/26339924]
+list:
+	@$(MAKE) -pRrq -f $(lastword $(MAKEFILE_LIST)) : 2>/dev/null | awk -v RS= -F: '/^# File/,/^# Finished Make data base/ {if ($$1 !~ "^[#.]") {print $$1}}' | sort | egrep -v -e '^[^[:alnum:]]' -e '^$@$$'
+
+# debugging make
+print-%:
+	@echo $* = $($*)
