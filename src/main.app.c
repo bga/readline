@@ -39,7 +39,7 @@ int main(int argc, char* argv[]) {
 	const char* promtp = (1 < argc) ? argv[1] : "> ";
 	char* str = NULL;
 	
-	 rl_outstream = stderr;
+	//# rl_outstream = stderr;
 	
 	while(1) {
 		if(str != NULL) {
